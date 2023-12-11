@@ -90,9 +90,9 @@ int main() {
 
   clock_t endTime = clock();
   
-  double timeGpu = ((double) (startTime - endTime)) / CLOCKS_PER_SEC; 
+  double timeGpu = ((double) (endTime - startTime)) / CLOCKS_PER_SEC; 
 
-  printf("GPU DONE in %f secs",timeGpu);
+  printf("GPU DONE in %f secs\n",timeGpu);
   
   
 
@@ -100,9 +100,9 @@ int main() {
   verify_result(h_a, h_b, h_c, N);
   
   endTime = clock();
-  double timeCpu = ((double) (startTime - endTime)) / CLOCKS_PER_SEC; 
+  double timeCpu = ((double) (endTime - startTime)) / CLOCKS_PER_SEC; 
 
-  printf("CPU DONE in %f secs",timeCpu);
+  printf("CPU DONE in %f secs\n",timeCpu);
 
   // Free memory on device
   cudaFree(d_a);
