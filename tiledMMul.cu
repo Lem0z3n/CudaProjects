@@ -1,4 +1,4 @@
-// This program computes a simple version of matrix multiplication
+// This program computes matrix multiplication using shared memory tiling
 // By: Nick from CoffeeBeforeArch
 
 #include <algorithm>
@@ -7,27 +7,55 @@
 #include <functional>
 #include <iostream>
 #include <vector>
-#include <time.h> 
+#include <time.h>
 
 using std::cout;
 using std::generate;
 using std::vector;
 
-__global__ void matrixMul(const int *a, const int *b, int *c, int N) {
+// Pull out matrix and shared memory tile size 
+const int N = 1 << 10;
+const int SHMEM_SIZE = 1 << 10;
+
+__global__ void matrixMul(const int *a, const int *b, int *c) {
   // Compute each thread's global row and column index
   int row = blockIdx.y * blockDim.y + threadIdx.y;
   int col = blockIdx.x * blockDim.x + threadIdx.x;
 
-  // Iterate over row, and down column
-  c[row * N + col] = 0;
-  for (int k = 0; k < N; k++) {
-    // Accumulate results for a single element
-    c[row * N + col] += a[row * N + k] * b[k * N + col];
+  // Statically allocated shared memory
+  __shared__ int s_a[SHMEM_SIZE];
+  __shared__ int s_b[SHMEM_SIZE];
+
+  // Accumulate in temporary variable
+  int tmp = 0;
+
+  // Sweep tile across matrix
+  for (int i = 0; i < N; i += blockDim.x) {
+    // Load in elements for this tile
+    s_a[threadIdx.y * blockDim.x + threadIdx.x] = a[row * N + i + threadIdx.x];
+    s_b[threadIdx.y * blockDim.x + threadIdx.x] =
+        b[i * N + threadIdx.y * N + col];
+
+    // Wait for both tiles to be loaded in before doing computation
+    __syncthreads();
+
+    // Do matrix multiplication on the small matrix
+    for (int j = 0; j < blockDim.x; j++) {
+      tmp +=
+          s_a[threadIdx.y * blockDim.x + j] * s_b[j * blockDim.x + threadIdx.x];
+    }
+
+    // Wait for all threads to finish using current tiles before loading in new
+    // ones
+    __syncthreads();
   }
+
+  // Write back results
+  c[row * N + col] = tmp;
 }
 
 // Check result on the CPU
-void verify_result(vector<int> &a, vector<int> &b, vector<int> &c, int N) {
+void verify_result(vector<int> &a, vector<int> &b, vector<int> &c) {
   // For every row...
   for (int i = 0; i < N; i++) {
     // For every column...
@@ -46,12 +74,9 @@ void verify_result(vector<int> &a, vector<int> &b, vector<int> &c, int N) {
 }
 
 int main() {
-  // Matrix size of 1024 x 1024;
-  int N = 1 << 10;
-  clock_t startTime = clock();
-
   // Size (in bytes) of matrix
   size_t bytes = N * N * sizeof(int);
+  clock_t startTime = clock();
 
   // Host vectors
   vector<int> h_a(N * N);
@@ -83,22 +108,18 @@ int main() {
   dim3 blocks(BLOCKS, BLOCKS);
 
   // Launch kernel
-  matrixMul<<<blocks, threads>>>(d_a, d_b, d_c, N);
+  matrixMul<<<blocks, threads>>>(d_a, d_b, d_c);
 
   // Copy back to the host
   cudaMemcpy(h_c.data(), d_c, bytes, cudaMemcpyDeviceToHost);
 
   clock_t endTime = clock();
-  
   double timeGpu = ((double) (endTime - startTime)) / CLOCKS_PER_SEC; 
 
   printf("GPU DONE in %f secs\n",timeGpu);
-  
-  
-
   // Check result
-  verify_result(h_a, h_b, h_c, N);
-  
+  verify_result(h_a, h_b, h_c);
+
   endTime = clock();
   double timeCpu = ((double) (endTime - startTime)) / CLOCKS_PER_SEC; 
 
