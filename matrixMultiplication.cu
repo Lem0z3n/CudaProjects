@@ -7,6 +7,7 @@
 #include <functional>
 #include <iostream>
 #include <vector>
+#include <time.h> 
 
 using std::cout;
 using std::generate;
@@ -47,6 +48,7 @@ void verify_result(vector<int> &a, vector<int> &b, vector<int> &c, int N) {
 int main() {
   // Matrix size of 1024 x 1024;
   int N = 1 << 10;
+  int startTime = clock();
 
   // Size (in bytes) of matrix
   size_t bytes = N * N * sizeof(int);
@@ -86,12 +88,21 @@ int main() {
   // Copy back to the host
   cudaMemcpy(h_c.data(), d_c, bytes, cudaMemcpyDeviceToHost);
 
-  cout << "GPU DONE\n";
+  clock_t endTime = clock();
+  
+  double timeGpu = ((double) (startTime - endTime)) / CLOCKS_PER_SEC; 
+
+  printf("GPU DONE in %f secs",timeGpu);
+  
+  
 
   // Check result
   verify_result(h_a, h_b, h_c, N);
+  
+  endTime = clock();
+  double timeCpu = ((double) (startTime - endTime)) / CLOCKS_PER_SEC; 
 
-  cout << "COMPLETED SUCCESSFULLY\n";
+  printf("CPU DONE in %f secs",timeCpu);
 
   // Free memory on device
   cudaFree(d_a);
