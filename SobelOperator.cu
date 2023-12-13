@@ -170,7 +170,7 @@ int main(int argc, char * args[]) {
         std::cout << "Error: Unable to read the image." << std::endl;
         return -1;
     }
-        
+    printf("image read.\n");   
     // Dimensions of the image
     int N = image.cols * image.rows;
 
@@ -190,7 +190,8 @@ int main(int argc, char * args[]) {
             matrix[i+j] = static_cast<int>(image.at<uchar>(i,j));
         }
     }
-
+    printf("Image casted\n");
+    
     // Allocate device memory
     int *d_matrix;
     int *d_resultX;
