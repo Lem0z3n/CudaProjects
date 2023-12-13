@@ -181,7 +181,7 @@ int main(int argc, char * args[]) {
     int *matrix = new int[N];
     int *resultX = new int[N];
     int *resultY = new int[N];
-    int *resultFinal = new int[N];
+    float *resultFinal = new float[N];
 
 
     //convertin from cv datatype to int[]
