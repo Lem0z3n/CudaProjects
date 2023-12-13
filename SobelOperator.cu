@@ -167,7 +167,7 @@ int main() {
     char  image_name[512];
     printf("Name the image, with the extension:\n");
     scanf(image_name, 512, stdin);
-    sprintf(image_name,"/Images/%s",image_name);
+    sprintf(image_name,"./Images/%s",image_name);
 
     //load image into cpu memory
     cv :: Mat image = cv :: imread(image_name,cv::IMREAD_GRAYSCALE);
