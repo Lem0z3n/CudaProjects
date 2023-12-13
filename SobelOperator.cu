@@ -165,13 +165,14 @@ int main() {
 
     //read image name from user
     char  image_name[512];
+    char fullpath[1024];
     printf("Name the image, with the extension:\n");
     scanf(image_name, 512, stdin);
-    sprintf(image_name,"home/guilemon/CudaProjects/Images/%s",image_name);
-    printf("%s\n",image_name);
+    sprintf(fullpath,"home/guilemon/CudaProjects/Images/%s",image_name);
+    printf("%s\n",fullpath);
 
     //load image into cpu memory
-    cv :: Mat image = cv :: imread(image_name,cv::IMREAD_GRAYSCALE);
+    cv :: Mat image = cv :: imread(fullpath,cv::IMREAD_GRAYSCALE);
     //error check
     if (image.empty()) {
         std::cout << "Error: Unable to read the image." << std::endl;
