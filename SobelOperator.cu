@@ -176,8 +176,20 @@ int main(int argc, char * args[]) {
 
     printf("COMPLETED SUCCESSFULLY!\n");
 
+    cv :: Mat imageResult(image.cols, image.rows, CV_32F, resultFinal);
+
+    cv :: normalize(imageResult,imageResult,0,255, cv :: NORM_MINMAX);
+
+    imageResult.convertTo(imageResult, CV_8U);
+
+    cv :: imshow("Float Image", imageResult);
+    while (1){};
+    
+
+
     // Free the memory we allocated
-    /*delete[] matrix;
+
+    delete[] matrix;
     delete[] resultX;
     delete[] resultY;
     delete[] resultFinal;
@@ -185,8 +197,7 @@ int main(int argc, char * args[]) {
     cudaFree(d_matrix);
     cudaFree(d_resultX);
     cudaFree(d_resultY);
-    cudaFree(d_resultFinal);*/
-    while(1){};
-    
+    cudaFree(d_resultFinal);
+
     return 0;
 }
