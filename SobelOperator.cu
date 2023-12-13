@@ -163,13 +163,8 @@ void verify_result(int *m, int *mask, int *result, int N) {
 
 int main(int argc, char * args[]) {
 
-    //read image name from user
-    char fullpath[1024];
-    sprintf(fullpath,"home/guilemon/CudaProjects/Images/%s",args[1]);
-    printf("%s\n",fullpath);
-
     //load image into cpu memory
-    cv :: Mat image = cv :: imread(fullpath,cv::IMREAD_GRAYSCALE);
+    cv :: Mat image = cv :: imread(args[1],cv::IMREAD_GRAYSCALE);
     //error check
     if (image.empty()) {
         std::cout << "Error: Unable to read the image." << std::endl;
@@ -187,6 +182,14 @@ int main(int argc, char * args[]) {
     int *resultX = new int[N];
     int *resultY = new int[N];
     int *resultFinal = new int[N];
+
+
+    //convertin from cv datatype to int[]
+    for(int i = 0; i < image.cols; i++){
+        for(int j = 0; j < image.rows; j++){
+            matrix[i+j] = static_cast<int>(image.at<uchar>(i,j));
+        }
+    }
 
     // Allocate device memory
     int *d_matrix;
