@@ -186,6 +186,7 @@ int main(int argc, char * args[]) {
     cudaFree(d_resultX);
     cudaFree(d_resultY);
     cudaFree(d_resultFinal);*/
-
+    while(1){};
+    
     return 0;
 }
