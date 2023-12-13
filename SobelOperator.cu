@@ -223,7 +223,8 @@ int main(int argc, char * args[]) {
     convolution_2d<<<grid_dim, block_dim>>>(d_matrix, d_resultX, d_resultY, d_resultFinal, N);
     printf("returning from gpu\n");
     // Copy the result back to the CPU
-    cudaMemcpy(resultFinal, d_resultFinal, bytes_res, cudaMemcpyDeviceToHost);
+
+    //cudaMemcpy(resultFinal, d_resultFinal, bytes_res, cudaMemcpyDeviceToHost);
 
 
     std::cout << "COMPLETED SUCCESSFULLY!";
