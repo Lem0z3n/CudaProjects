@@ -190,8 +190,8 @@ int main(int argc, char * args[]) {
             matrix[i+j] = static_cast<int>(image.at<uchar>(i,j));
         }
     }
-    printf("Image casted\n");
     
+
     // Allocate device memory
     int *d_matrix;
     int *d_resultX;
@@ -208,7 +208,7 @@ int main(int argc, char * args[]) {
 
     // Copy data to the device
     cudaMemcpy(d_matrix, matrix, bytes_n, cudaMemcpyHostToDevice);
-
+    printf("Image copied to GPU\n");
     // Calculate grid dimensions
     int THREADS = 16;
     int BLOCKS = (N + THREADS - 1) / THREADS;
@@ -218,8 +218,9 @@ int main(int argc, char * args[]) {
     dim3 grid_dim(BLOCKS, BLOCKS);
 
     // Perform 2D Convolution
+    printf("calling gpu\n");
     convolution_2d<<<grid_dim, block_dim>>>(d_matrix, d_resultX, d_resultY, d_resultFinal, N);
-
+    printf("returning from gpu\n");
     // Copy the result back to the CPU
     cudaMemcpy(resultFinal, d_resultFinal, bytes_n, cudaMemcpyDeviceToHost);
 
