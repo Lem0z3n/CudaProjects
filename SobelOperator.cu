@@ -182,8 +182,13 @@ int main(int argc, char * args[]) {
 
     imageResult.convertTo(imageResult, CV_8U);
 
-    cv :: imshow("Float Image", imageResult);
-    while (1){};
+    char resultName [1024];
+    sprintf(resultName, "Completed%s", args[1]);
+
+    if (cv::imwrite(resultName, imageResult))
+        std::cout << "Image saved successfully!" << std::endl;
+    else
+        std::cerr << "Error saving image!" << std::endl;
     
 
 
