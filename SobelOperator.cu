@@ -227,7 +227,7 @@ int main(int argc, char * args[]) {
     //cudaMemcpy(resultFinal, d_resultFinal, bytes_res, cudaMemcpyDeviceToHost);
 
 
-    std::cout << "COMPLETED SUCCESSFULLY!";
+    printf("COMPLETED SUCCESSFULLY!\n");
 
     // Free the memory we allocated
     delete[] matrix;
