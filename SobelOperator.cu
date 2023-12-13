@@ -161,14 +161,11 @@ void verify_result(int *m, int *mask, int *result, int N) {
 
 
 
-int main() {
+int main(int argc, char * args[]) {
 
     //read image name from user
-    char  image_name[512];
     char fullpath[1024];
-    printf("Name the image, with the extension:\n");
-    scanf(image_name, 512, stdin);
-    sprintf(fullpath,"home/guilemon/CudaProjects/Images/%s",image_name);
+    sprintf(fullpath,"home/guilemon/CudaProjects/Images/%s",args[1]);
     printf("%s\n",fullpath);
 
     //load image into cpu memory
