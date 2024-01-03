@@ -126,7 +126,7 @@ int main(int argc, char * args[]) {
     //convertin from cv datatype to int[]
     for(int i = 0; i < image.cols; i++){
         for(int j = 0; j < image.rows; j++){
-            matrix[i+j] = static_cast<float>(image.at<uchar>(i,j));
+            matrix[i+j] = static_cast<int>(image.at<uchar>(i,j));
         }
     }
     
@@ -149,7 +149,7 @@ int main(int argc, char * args[]) {
     
     
     for(int i = 0; i < N ; i++){
-        resultFinal[i] = matrix[i];
+        resultFinal[i] =static_cast<float> (matrix[i]);
     }
     printf("checking image\n");
     check_result(resultFinal,"matrix");
