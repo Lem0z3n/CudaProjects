@@ -117,7 +117,7 @@ int main(int argc, char * args[]) {
     size_t bytes_res = N * sizeof(float);
 
     // Allocate the matrix and initialize it
-    float *matrix = new float[N];
+    int *matrix = new int[N];
     int *resultX = new int[N];
     int *resultY = new int[N];
     float *resultFinal = new float[N];
@@ -147,7 +147,11 @@ int main(int argc, char * args[]) {
     mask hostMask;
     cudaMemcpyToSymbol(gpuMask,&hostMask,sizeof(mask));
     
-    check_result( matrix,"matrix");
+    for(int i = 0; i < N ; i++){
+        resultFinal[i] = matrix[i];
+    }
+    
+    check_result(resultFinal,"matrix");
     // Copy data to the device
     cudaMemcpy(d_matrix, matrix, bytes_n, cudaMemcpyHostToDevice);
     printf("Image copied to GPU\n");
