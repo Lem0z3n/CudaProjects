@@ -76,9 +76,11 @@ __global__ void sobelOperator(int *matrix, int *resultX, int *resultY,
 
     }
 
-bool check_result(float * endRes){
+bool check_result(float * endRes, char* filename){
 
-    int fd = open("Result.txt",O_CREAT);
+    char *name;
+    sprintf(name,"%s.txt",filename);
+    int fd = open(name,O_CREAT);
 
     char buf[sizeof(float)+4];
     int i = 0;
@@ -115,7 +117,7 @@ int main(int argc, char * args[]) {
     size_t bytes_res = N * sizeof(float);
 
     // Allocate the matrix and initialize it
-    int *matrix = new int[N];
+    float *matrix = new float[N];
     int *resultX = new int[N];
     int *resultY = new int[N];
     float *resultFinal = new float[N];
@@ -124,7 +126,7 @@ int main(int argc, char * args[]) {
     //convertin from cv datatype to int[]
     for(int i = 0; i < image.cols; i++){
         for(int j = 0; j < image.rows; j++){
-            matrix[i+j] = static_cast<int>(image.at<uchar>(i,j));
+            matrix[i+j] = static_cast<float>(image.at<uchar>(i,j));
         }
     }
     
@@ -144,7 +146,8 @@ int main(int argc, char * args[]) {
     //allocate memory in gpu for mask
     mask hostMask;
     cudaMemcpyToSymbol(gpuMask,&hostMask,sizeof(mask));
-
+    
+    check_result( matrix,"matrix");
     // Copy data to the device
     cudaMemcpy(d_matrix, matrix, bytes_n, cudaMemcpyHostToDevice);
     printf("Image copied to GPU\n");
@@ -165,7 +168,7 @@ int main(int argc, char * args[]) {
 
     printf("COMPLETED SUCCESSFULLY!\n");
 
-    check_result(resultFinal);
+    check_result(resultFinal,"result");
 
     cv :: Mat imageResult(image.cols, image.rows, CV_32F, resultFinal);
 
