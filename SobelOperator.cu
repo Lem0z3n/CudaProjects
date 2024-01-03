@@ -84,7 +84,7 @@ bool check_result(float * endRes){
     int i = 0;
     sprintf(buf,"%f", endRes[i]);
     printf("writing image\n");
-    while(write(fd,buf,4)){
+    while(write(fd,buf,sizeof(buf)) != -1 && endRes[i] != NULL){
         i++;
         sprintf(buf,"%f", endRes[i]);
     }
