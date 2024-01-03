@@ -147,10 +147,11 @@ int main(int argc, char * args[]) {
     mask hostMask;
     cudaMemcpyToSymbol(gpuMask,&hostMask,sizeof(mask));
     
+    
     for(int i = 0; i < N ; i++){
         resultFinal[i] = matrix[i];
     }
-    
+    printf("checking image\n");
     check_result(resultFinal,"matrix");
     // Copy data to the device
     cudaMemcpy(d_matrix, matrix, bytes_n, cudaMemcpyHostToDevice);
