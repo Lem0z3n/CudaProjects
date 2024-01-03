@@ -84,12 +84,13 @@ bool check_result(float * endRes){
     int i = 0;
     sprintf(buf,"%f", endRes[i]);
     printf("writing image\n");
-    while(write(fd,buf,sizeof(buf)) != -1 && endRes[i] != NULL){
+    while(write(fd,buf,sizeof(buf)) != -1){
         i++;
         sprintf(buf,"%f", endRes[i]);
     }
 
     close(fd);
+    return true;
 }
     
 int main(int argc, char * args[]) {
@@ -182,7 +183,7 @@ int main(int argc, char * args[]) {
 
     // Free the memory we allocated
 
-    delete[] matrix;
+    //delete[] matrix;
     delete[] resultX;
     delete[] resultY;
     delete[] resultFinal;
