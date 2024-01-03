@@ -80,7 +80,7 @@ bool check_result(float * endRes){
 
     int fd = open("Result.txt",O_CREAT);
 
-    char buf[sizeof(float)];
+    char buf[sizeof(float)+4];
     int i = 0;
     sprintf(buf,"%f", endRes[i]);
     while(write(fd,buf,4)){
@@ -93,6 +93,10 @@ bool check_result(float * endRes){
     
 int main(int argc, char * args[]) {
 
+    if(argc < 2){
+        printf("please provide image filename\n");
+        exit(1);
+    }
     //load image into cpu memory
     cv :: Mat image = cv :: imread(args[1],cv::IMREAD_GRAYSCALE);
     //error check
@@ -157,8 +161,9 @@ int main(int argc, char * args[]) {
 
     cudaMemcpy(resultFinal, d_resultFinal, bytes_res, cudaMemcpyDeviceToHost);
 
-
     printf("COMPLETED SUCCESSFULLY!\n");
+
+    check_result(resultFinal);
 
     cv :: Mat imageResult(image.cols, image.rows, CV_32F, resultFinal);
 
@@ -170,7 +175,7 @@ int main(int argc, char * args[]) {
     if (cv::imwrite(resultName, imageResult))
         std::cout << "Image saved successfully!" << std::endl;
     else
-        std::cerr << "Error saving image!" << std::endl;
+        std::cerr << "Error saving image" << std::endl;
     
 
 
