@@ -7,7 +7,10 @@
 #include <opencv2/opencv.hpp>
 #include <string>
 #include <algorithm>
-
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 // 3 convolutional mask
 #define MASK_DIM 3
@@ -30,82 +33,62 @@ __constant__ struct mask gpuMask;
 //  matrix: Input matrix
 //  result: Convolution result
 //  N:      Dimensions of the matrices
-__global__ void convolution_2d(int *matrix, int *resultX, int *resultY,
-                                 float *resultFinal, int N) {
+__global__ void sobelOperator(int *matrix, int *resultX, int *resultY,
+                                 float *resultFinal, int cols, int rows) { //missing rows and cols i cant use N
+   
     // Calculate the global thread positions
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    int tCol = tid % cols;
+    int tRow = (tid-tCol) % cols;
 
     // Starting index for calculation
-    int start_r = row - MASK_OFFSET;
-    int start_c = col - MASK_OFFSET;
+    int start_c = tCol - MASK_OFFSET;
+    int start_r = tRow - MASK_OFFSET;
 
     // Temp value for accumulating the result
-    int temp = 0;
+    int tempX = 0;
+    int tempY = 0;
 
     // Sum(X1b,𝐴 [i,𝑗−𝑏])
     for (int i = 0; i < MASK_DIM; i++) {
         // Range check for cols
-        if ((start_c + i) >= 0 && (start_c + i) < N) {
+        if ((start_c + i) >= 0 && (start_c + i) < cols) {
             // Accumulate result
-            temp += matrix[(start_r) * N + (start_c + i)] *
-                    gpuMask.x1[i];
-        }
-    }
-    // Write back the result
-    resultX[row * N + col] = temp;
-
-    //wait for all the threads to write their result
-    __syncthreads(); 
-
-    //Sum( X2𝑎, 𝐻 [𝑖−𝑎,𝑗])
-    //NOT COALESCED READING!!! this is baaad
-    for (int i = 0; i < MASK_DIM; i++) {
-        // Range check for cols
-        if ((start_r + i) >= 0 && (start_r + i) < N) {
-            // Accumulate result
-            temp += resultX[(start_r+i) * N + (start_c)] *
+            tempX += matrix[(tRow) * cols + (start_c + i)] *
                     gpuMask.x2[i];
-        }
-    }
-
-    // Write back the result
-    resultX[row * N + col] = temp;
-    //wait for all the threads to write their result
-    __syncthreads(); 
-
-    // Sum(Y1b,𝐴 [i,𝑗−𝑏])
-    for (int i = 0; i < MASK_DIM; i++) {
-        // Range check for cols
-        if ((start_c + i) >= 0 && (start_c + i) < N) {
-            // Accumulate result
-            temp += matrix[(start_r) * N + (start_c + i)] *
-                    gpuMask.y1[i];
-        }
-    }
-
-    resultY[row*N + col] = temp;
-    //wait for all the threads to write their result
-    __syncthreads(); 
-
-    //Sum( X2𝑎, 𝐻 [𝑖−𝑎,𝑗])
-    //NOT COALESCED READING!!! this is baaad
-    for (int i = 0; i < MASK_DIM; i++) {
-        // Range check for cols
-        if ((start_r + i) >= 0 && (start_r + i) < N) {
-            // Accumulate result
-            temp += resultY[(start_r+i) * N + (start_c)] *
+            tempY +=matrix[(tRow) * cols + (start_c + i)] *
                     gpuMask.y2[i];
         }
     }
-
-    resultY[row*N + col] = temp;
+    // Write back the result
+    resultX[tRow * cols + tCol] = tempX;
+    resultY[tRow * cols + tCol] = tempY;
     //wait for all the threads to write their result
     __syncthreads(); 
-
+    
     //√(𝐻 𝑖𝑗)² + (𝑉 𝑖𝑗)²
+    resultFinal[tRow*cols+tCol] =  sqrt( pow(resultX[tRow*cols+tCol],2) + pow(resultY[tRow*cols+tCol],2));
+   
+   //if the result is bigger than the threshold write white if not black.
+    (resultFinal[tRow*cols+tCol]>600) ? resultFinal[tRow*cols+tCol] = 255 
+    : resultFinal[tRow*cols+tCol] =0;
 
-    resultFinal[row*N+col] =  sqrt( pow(resultX[row*N+col],2) + pow(resultY[row*N+col],2)) ;
+    }
+
+bool check_result(float * endRes){
+
+    int fd = open("Result.txt",O_CREAT);
+
+    char buf[sizeof(float)];
+    int i = 0;
+    sprintf(buf,"%f", endRes[i]);
+    while(write(fd,buf,4)){
+        i++;
+        sprintf(buf,"%f", endRes[i]);
+    }
+
+    close(fd);
 }
     
 int main(int argc, char * args[]) {
@@ -149,7 +132,9 @@ int main(int argc, char * args[]) {
     cudaMalloc(&d_matrix, bytes_n);
     cudaMalloc(&d_resultX, bytes_n);
     cudaMalloc(&d_resultY, bytes_n);
-    cudaMalloc(&d_resultFinal, bytes_n);
+    cudaMalloc(&d_resultFinal, bytes_res);
+
+
     //allocate memory in gpu for mask
     mask hostMask;
     cudaMemcpyToSymbol(gpuMask,&hostMask,sizeof(mask));
@@ -157,17 +142,16 @@ int main(int argc, char * args[]) {
     // Copy data to the device
     cudaMemcpy(d_matrix, matrix, bytes_n, cudaMemcpyHostToDevice);
     printf("Image copied to GPU\n");
-    // Calculate grid dimensions
-    int THREADS = 16;
-    int BLOCKS = (N + THREADS - 1) / THREADS;
+    
+    // Threads per TB
+    int THREADS = 256;
 
-    // Dimension launch arguments
-    dim3 block_dim(THREADS, THREADS);
-    dim3 grid_dim(BLOCKS, BLOCKS);
+    // Number of TBs
+    int GRID = (N + THREADS - 1) / THREADS;
 
     // Perform 2D Convolution
     printf("calling gpu\n");
-    convolution_2d<<<grid_dim, block_dim>>>(d_matrix, d_resultX, d_resultY, d_resultFinal, N);
+    sobelOperator<<<GRID, THREADS>>>(d_matrix, d_resultX, d_resultY, d_resultFinal, image.cols, image.rows);
     printf("returning from gpu\n");
     // Copy the result back to the CPU
 
@@ -177,8 +161,6 @@ int main(int argc, char * args[]) {
     printf("COMPLETED SUCCESSFULLY!\n");
 
     cv :: Mat imageResult(image.cols, image.rows, CV_32F, resultFinal);
-
-    cv :: normalize(imageResult,imageResult,0,255, cv :: NORM_MINMAX);
 
     imageResult.convertTo(imageResult, CV_8U);
 
