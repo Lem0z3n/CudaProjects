@@ -38,10 +38,10 @@ __global__ void sobelOperator(int *matrix, int *resultX, int *resultY,
                                     //missing rows and cols i cant use N
    
     // Calculate the global thread positions
-    int tid = blockIdx.x + threadIdx.x;
+    int tid = blockIdx.x*blockDim.x + threadIdx.x;
 
     int tCol = tid % cols;
-    int tRow = (tid-tCol) % cols;
+    int tRow = tid / cols;
 
     // Starting index for calculation
     int start_c = tCol - MASK_OFFSET;
