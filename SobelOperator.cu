@@ -78,7 +78,7 @@ __global__ void sobelOperator(int *matrix, int *resultX, int *resultY,
 
 bool check_result(float * endRes, char* filename, int columns){
 
-    char *name;
+    char name[512];
     sprintf(name,"%s.txt",filename);
     FILE * file = fopen(name,"w");
 
