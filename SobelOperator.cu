@@ -127,7 +127,6 @@ int main(int argc, char * args[]) {
     for(int i = 0; i < image.cols; i++){
         for(int j = 0; j < image.rows; j++){
             matrix[i+j] = static_cast<int>(image.at<uchar>(i,j));
-            printf("%i\n", matrix[i+j]);
         }
     }
     
