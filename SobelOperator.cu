@@ -76,22 +76,22 @@ __global__ void sobelOperator(int *matrix, int *resultX, int *resultY,
 
     }
 
-bool check_result(float * endRes, char* filename){
+bool check_result(float * endRes, char* filename, int columns){
 
     char *name;
     sprintf(name,"%s.txt",filename);
-    int fd = open(name,O_CREAT);
+    FILE * file = fopen(name,"w");
 
     char buf[sizeof(float)+4];
     int i = 0;
-    sprintf(buf,"%f", endRes[i]);
     printf("writing image\n");
-    while(write(fd,buf,sizeof(buf)) != -1){
+    while(fprintf(file,"%f",endRes[i])>0){
         i++;
-        sprintf(buf,"%f", endRes[i]);
+        if(i%columns == 0)
+            fprintf(file,"\n");
     }
+    fclose(file);
 
-    close(fd);
     return true;
 }
     
@@ -153,7 +153,7 @@ int main(int argc, char * args[]) {
         resultFinal[i] =static_cast<float> (matrix[i]);
     }
     printf("checking image\n");
-    check_result(resultFinal,"matrix");
+    check_result(resultFinal,"matrix",image.cols);
     // Copy data to the device
     cudaMemcpy(d_matrix, matrix, bytes_n, cudaMemcpyHostToDevice);
     printf("Image copied to GPU\n");
@@ -174,7 +174,7 @@ int main(int argc, char * args[]) {
 
     printf("COMPLETED SUCCESSFULLY!\n");
 
-    check_result(resultFinal,"result");
+    check_result(resultFinal,"result",image.cols);
 
     cv :: Mat imageResult(image.cols, image.rows, CV_32F, resultFinal);
 
