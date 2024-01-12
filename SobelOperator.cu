@@ -34,10 +34,11 @@ __constant__ struct mask gpuMask;
 //  result: Convolution result
 //  N:      Dimensions of the matrices
 __global__ void sobelOperator(int *matrix, int *resultX, int *resultY,
-                                 float *resultFinal, int cols, int rows) { //missing rows and cols i cant use N
+                                 float *resultFinal, int cols, int rows) { 
+                                    //missing rows and cols i cant use N
    
     // Calculate the global thread positions
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int tid = blockIdx.x + threadIdx.x;
 
     int tCol = tid % cols;
     int tRow = (tid-tCol) % cols;
