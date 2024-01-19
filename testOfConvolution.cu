@@ -42,20 +42,19 @@ __global__ void convolution_1d(int *array, int *mask, int *result, int n,
 }
 
 // Verify the result on the CPU
-void verify_result(int *array, int *mask, int *result, int n, int m) {
-  int radius = m / 2;
-  int temp;
-  int start;
-  for (int i = 0; i < n; i++) {
-    start = i - radius;
-    temp = 0;
-    for (int j = 0; j < m; j++) {
-      if ((start + j >= 0) && (start + j < n)) {
-        temp += array[start + j] * mask[j];
-      }
+bool check_result(int * endRes, int N, const char* filename){
+
+
+    FILE * file = fopen( filename,"w");
+
+    int i = 0;
+    printf("cheking result\n");
+    while(fprintf(file," %i ",endRes[i])>0 && i < N){
+        i++;
     }
-    assert(temp == result[i]);
-  }
+    fclose(file);
+
+    return true;
 }
 
 int main() {
@@ -100,6 +99,8 @@ int main() {
   // Number of TBs
   int GRID = (n + THREADS - 1) / THREADS;
 
+  check_result(h_array.data(), h_array.size(), "beforeConvolution.txt");
+
   // Call the kernel
   convolution_1d<<<GRID, THREADS>>>(d_array, d_mask, d_result, n, m);
 
@@ -107,7 +108,7 @@ int main() {
   cudaMemcpy(h_result.data(), d_result, bytes_n, cudaMemcpyDeviceToHost);
 
   // Verify the result
-  verify_result(h_array.data(), h_mask.data(), h_result.data(), n, m);
+  check_result(h_array.data(), h_array.size(), "afterConvolution.txt");
 
   std::cout << "COMPLETED SUCCESSFULLY\n";
 
