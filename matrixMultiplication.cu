@@ -32,10 +32,9 @@ bool check_result(vector<int> endRes, int N){
 
     FILE * file = fopen("doesItWrite.txt","w");
 
-    char buf[sizeof(int)+4];
     int i = 0;
-    printf("writing image\n");
-    while(fprintf(file," %f ",endRes[i])>0 && i < N){
+    printf("cheking result\n");
+    while(fprintf(file," %i ",endRes[i])>0 && i < N){
         i++;
     }
     fclose(file);
