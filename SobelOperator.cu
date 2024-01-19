@@ -76,7 +76,7 @@ __global__ void sobelOperator(int *matrix, int *gpuMaskX, int *gpuMaskY,
     float accResult =  sqrt( pow(tempX,2) + pow(tempY,2));
 
     //if the result is bigger than the threshold write white if not black.
-    (accResult>15) ? resultFinal[tRow*cols+tCol] = 255 : resultFinal[tRow*cols+tCol] =0;
+    (accResult>17) ? resultFinal[tRow*cols+tCol] = 255 : resultFinal[tRow*cols+tCol] =0;
 
     }
 
