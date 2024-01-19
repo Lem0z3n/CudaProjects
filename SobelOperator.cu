@@ -181,9 +181,7 @@ int main(int argc, char * args[]) {
 
     check_result(resultFinal,"result",image.cols, N);
 
-    cv :: Mat imageResult(image.cols, image.rows, CV_32F, resultFinal);
-
-    imageResult.convertTo(imageResult, CV_8U);
+    cv :: Mat imageResult(image.cols, image.rows, CV_8UC1, resultFinal);
 
     char resultName [1024];
     sprintf(resultName, "Completed%s", args[1]);
