@@ -25,9 +25,8 @@
 //  matrix: Input matrix
 //  result: Convolution result
 //  N:      Dimensions of the matrices
-__global__ void sobelOperator(int *matrix, int *gpuMaskX[], int *gpuMaskY[],
+__global__ void sobelOperator(int *matrix, int *gpuMaskX, int *gpuMaskY,
                                  int *resultFinal, int cols, int rows) { 
-                                    //missing rows and cols i cant use N
    
     // Calculate the global thread positions
     int tid = blockIdx.x*blockDim.x + threadIdx.x;
@@ -53,7 +52,7 @@ __global__ void sobelOperator(int *matrix, int *gpuMaskX[], int *gpuMaskY[],
                 if ((start_c + j) >= 0 && (start_c + j) < cols) {
                     // Accumulate result
                     tempX += matrix[(start_r + i) * cols + (start_c + j)] *
-                            gpuMaskX[i][j];
+                            gpuMaskX[i*3+j];
                 }
             }
         }
@@ -68,7 +67,7 @@ __global__ void sobelOperator(int *matrix, int *gpuMaskX[], int *gpuMaskY[],
                 if ((start_c + j) >= 0 && (start_c + j) < cols) {
                     // Accumulate result
                     tempY += matrix[(start_r + i) * cols + (start_c + j)] *
-                            gpuMaskY[i][j];
+                            gpuMaskY[i*3+j];
                 }
             }
         }
@@ -126,13 +125,13 @@ int main(int argc, char * args[]) {
     int *resultY = new int[N];
     int *resultFinal = new int[N];
     
-    const int maskX[3][3] = {{-1,0,1},
-                            {-2,0,2},
-                            {-1,0,1}};
+    const int maskX[9] =    {-1,0,1,
+                            -2,0,2,
+                            -1,0,1};
 
-    const int maskY[3][3] = {{1,2,1},
-                            {0,0,0},
-                            {-1,-2,-1}};
+    const int maskY[9] =    {1,2,1
+                            ,0,0,0,
+                            -1,-2,-1};
 
 
     //convertin from cv datatype to int[]
@@ -145,8 +144,8 @@ int main(int argc, char * args[]) {
 
     // Allocate device memory
     int *d_matrix;
-    int **d_maskX;
-    int **d_maskY;
+    int *d_maskX;
+    int *d_maskY;
     int *d_resultFinal;
 
     cudaMalloc(&d_matrix, bytes_n);
