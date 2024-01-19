@@ -39,7 +39,6 @@ __global__ void sobelOperator(int *matrix, int *gpuMaskX[], int *gpuMaskY[],
     int tempX = 0;
     int tempY = 0;
 
-    int N = cols * rows;
     // Starting index for calculation
     int start_r = tRow - MASK_OFFSET;
     int start_c = tCol - MASK_OFFSET;
@@ -49,11 +48,11 @@ __global__ void sobelOperator(int *matrix, int *gpuMaskX[], int *gpuMaskY[],
         // Go over each column
         for (int j = 0; j < MASK_DIM; j++) {
             // Range check for rows
-            if ((start_r + i) >= 0 && (start_r + i) < N) {
+            if ((start_r + i) >= 0 && (start_r + i) < rows) {
             // Range check for columns
-                if ((start_c + j) >= 0 && (start_c + j) < N) {
+                if ((start_c + j) >= 0 && (start_c + j) < cols) {
                     // Accumulate result
-                    tempX += matrix[(start_r + i) * N + (start_c + j)] *
+                    tempX += matrix[(start_r + i) * rows + (start_c + j)] *
                             gpuMaskX[i][j];
                 }
             }
@@ -64,11 +63,11 @@ __global__ void sobelOperator(int *matrix, int *gpuMaskX[], int *gpuMaskY[],
         // Go over each column
         for (int j = 0; j < MASK_DIM; j++) {
             // Range check for rows
-            if ((start_r + i) >= 0 && (start_r + i) < N) {
+            if ((start_r + i) >= 0 && (start_r + i) < rows) {
             // Range check for columns
-                if ((start_c + j) >= 0 && (start_c + j) < N) {
+                if ((start_c + j) >= 0 && (start_c + j) < cols) {
                     // Accumulate result
-                    tempY += matrix[(start_r + i) * N + (start_c + j)] *
+                    tempY += matrix[(start_r + i) * rows + (start_c + j)] *
                             gpuMaskY[i][j];
                 }
             }
