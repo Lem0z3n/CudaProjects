@@ -108,7 +108,7 @@ int main() {
   cudaMemcpy(h_result.data(), d_result, bytes_n, cudaMemcpyDeviceToHost);
 
   // Verify the result
-  check_result(h_array.data(), h_array.size(), "afterConvolution.txt");
+  check_result(h_result.data(), h_result.size(), "afterConvolution.txt");
 
   std::cout << "COMPLETED SUCCESSFULLY\n";
 
