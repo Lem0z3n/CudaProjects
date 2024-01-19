@@ -25,7 +25,7 @@
 //  matrix: Input matrix
 //  result: Convolution result
 //  N:      Dimensions of the matrices
-__global__ void sobelOperator(int *matrix, int *gpuMask[], int *resultX, int *resultY,
+__global__ void sobelOperator(int *matrix, int *gpuMaskX[], int *gpuMaskY[],
                                  int *resultFinal, int cols, int rows) { 
                                     //missing rows and cols i cant use N
    
@@ -35,55 +35,54 @@ __global__ void sobelOperator(int *matrix, int *gpuMask[], int *resultX, int *re
     int tCol = tid % cols;
     int tRow = tid / cols;
 
-    // Starting index for calculation
-    int start_c = tCol - MASK_OFFSET;
-
     // Temp value for accumulating the result
     int tempX = 0;
     int tempY = 0;
 
+    int N = cols * rows;
+    // Starting index for calculation
+    int start_r = tRow - MASK_OFFSET;
+    int start_c = tCol - MASK_OFFSET;
 
-    // Sum(X1b,𝐴 [i,𝑗−𝑏])
+    // Iterate over all the rows
     for (int i = 0; i < MASK_DIM; i++) {
-        // Range check for cols
-        if ((start_c + i) >= 0 && (start_c + i) < cols) {
-            // Accumulate result
-            tempX += matrix[(tRow) * cols + (start_c + i)] *
-                    gpuMask[2][i];
-            tempY +=matrix[(tRow) * cols + (start_c + i)] *
-                    gpuMask[4][i];
+        // Go over each column
+        for (int j = 0; j < MASK_DIM; j++) {
+            // Range check for rows
+            if ((start_r + i) >= 0 && (start_r + i) < N) {
+            // Range check for columns
+                if ((start_c + j) >= 0 && (start_c + j) < N) {
+                    // Accumulate result
+                    tempX += matrix[(start_r + i) * N + (start_c + j)] *
+                            gpuMaskX[i][j];
+                }
+            }
         }
     }
-    // Write back the result
-    resultX[tRow * cols + tCol] = tempX;
-    resultY[tRow * cols + tCol] = tempY;
-    //wait for all the threads to write their result
-    __syncthreads(); 
 
     for (int i = 0; i < MASK_DIM; i++) {
-        // Range check for cols
-        if ((start_c + i) >= 0 && (start_c + i) < cols) {
-            // Accumulate result
-            tempX += resultX[(tRow) * cols + (start_c + i)] *
-                    gpuMask[1][i];
-            tempY +=resultY[(tRow) * cols + (start_c + i)] *
-                    gpuMask[3][i];
+        // Go over each column
+        for (int j = 0; j < MASK_DIM; j++) {
+            // Range check for rows
+            if ((start_r + i) >= 0 && (start_r + i) < N) {
+            // Range check for columns
+                if ((start_c + j) >= 0 && (start_c + j) < N) {
+                    // Accumulate result
+                    tempY += matrix[(start_r + i) * N + (start_c + j)] *
+                            gpuMaskY[i][j];
+                }
+            }
         }
     }
-    // Write back the result
-    resultX[tRow * cols + tCol] = tempX;
-    resultY[tRow * cols + tCol] = tempY;
-    __syncthreads(); 
-    
     //√(𝐻 𝑖𝑗)² + (𝑉 𝑖𝑗)²
-    float accResult =  sqrt( pow(resultX[tRow*cols+tCol],2) + pow(resultY[tRow*cols+tCol],2));
-   
-   //if the result is bigger than the threshold write white if not black.
-   (accResult>0) ? resultFinal[tRow*cols+tCol] = 255 : resultFinal[tRow*cols+tCol] =0;
+    float accResult =  sqrt( pow(tempX,2) + pow(tempY,2));
+
+    //if the result is bigger than the threshold write white if not black.
+    (accResult>0) ? resultFinal[tRow*N+tCol] = 255 : resultFinal[tRow*N+tCol] =0;
 
     }
 
-bool check_result(int * endRes, char* filename, int columns, int N){
+    bool check_result(int * endRes, char* filename, int columns, int N){
 
     char name[512];
     sprintf(name,"%s.txt",filename);
@@ -128,10 +127,14 @@ int main(int argc, char * args[]) {
     int *resultY = new int[N];
     int *resultFinal = new int[N];
     
-    const int mask[4][3] = {{1,2,1},
-                            {-1,0,1},
-                            {1,0,-1},
-                            {1,2,1}};
+    const int maskX[3][3] = {{-1,0,1},
+                            {-2,0,2},
+                            {-1,0,1}};
+
+    const int maskY[3][3] = {{1,2,1},
+                            {0,0,0},
+                            {-1,-2,-1}};
+
 
     //convertin from cv datatype to int[]
     for(int i = 0; i < image.rows; i++){
@@ -143,23 +146,22 @@ int main(int argc, char * args[]) {
 
     // Allocate device memory
     int *d_matrix;
-    int *d_resultX;
-    int *d_resultY;
-    int **d_mask;
+    int **d_maskX;
+    int **d_maskY;
     int *d_resultFinal;
 
     cudaMalloc(&d_matrix, bytes_n);
-    cudaMalloc(&d_resultX, bytes_n);
-    cudaMalloc(&d_resultY, bytes_n);
     cudaMalloc(&d_resultFinal, bytes_res);
-    cudaMalloc(&d_mask, sizeof(mask));
-
+    cudaMalloc(&d_maskX, sizeof(maskX));
+    cudaMalloc(&d_maskY, sizeof(maskX));
     
     printf("checking image\n");
     check_result(matrix,"matrix",image.cols, N);
     // Copy data to the device
     cudaMemcpy(d_matrix, matrix, bytes_n, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_mask, mask, sizeof(mask), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_maskX, maskX, sizeof(maskX), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_maskY, maskY, sizeof(maskX), cudaMemcpyHostToDevice);
+
     printf("Image copied to GPU\n");
     
     // Threads per TB
@@ -171,7 +173,7 @@ int main(int argc, char * args[]) {
     // Perform 2D Convolution
 
     printf("calling gpu\n");
-    sobelOperator<<<GRID, THREADS>>>(d_matrix, d_mask, d_resultX, d_resultY, d_resultFinal, image.cols, image.rows);
+    sobelOperator<<<GRID, THREADS>>>(d_matrix, d_maskX, d_maskY, d_resultFinal, image.cols, image.rows);
     printf("returning from gpu\n");
     // Copy the result back to the CPU
 
@@ -205,8 +207,6 @@ int main(int argc, char * args[]) {
 
 
     cudaFree(d_matrix);
-    cudaFree(d_resultX);
-    cudaFree(d_resultY);
     cudaFree(d_resultFinal);
 
     return 0;
