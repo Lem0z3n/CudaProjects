@@ -37,7 +37,6 @@ __global__ void sobelOperator(int *matrix, int *gpuMask[], int *resultX, int *re
 
     // Starting index for calculation
     int start_c = tCol - MASK_OFFSET;
-    int start_r = tRow - MASK_OFFSET;
 
     // Temp value for accumulating the result
     int tempX = 0;
@@ -121,7 +120,7 @@ int main(int argc, char * args[]) {
 
     // Size of the matrix (in bytes)
     size_t bytes_n = N  * sizeof(int);
-    size_t bytes_res = N * sizeof(float);
+    size_t bytes_res = N * sizeof(int);
 
     // Allocate the matrix and initialize it
     int *matrix = new int[N];
@@ -156,13 +155,8 @@ int main(int argc, char * args[]) {
     cudaMalloc(&d_mask, sizeof(mask));
 
     
-    
-    
-    for(int i = 0; i < N ; i++){
-        resultFinal[i] =static_cast<int> (matrix[i]);
-    }
     printf("checking image\n");
-    check_result(resultFinal,"matrix",image.cols, N);
+    check_result(matrix,"matrix",image.cols, N);
     // Copy data to the device
     cudaMemcpy(d_matrix, matrix, bytes_n, cudaMemcpyHostToDevice);
     cudaMemcpy(d_mask, mask, sizeof(mask), cudaMemcpyHostToDevice);
