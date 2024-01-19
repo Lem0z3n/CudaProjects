@@ -52,7 +52,7 @@ __global__ void sobelOperator(int *matrix, int *gpuMaskX[], int *gpuMaskY[],
             // Range check for columns
                 if ((start_c + j) >= 0 && (start_c + j) < cols) {
                     // Accumulate result
-                    tempX += matrix[(start_r + i) * rows + (start_c + j)] *
+                    tempX += matrix[(start_r + i) * cols + (start_c + j)] *
                             gpuMaskX[i][j];
                 }
             }
@@ -67,7 +67,7 @@ __global__ void sobelOperator(int *matrix, int *gpuMaskX[], int *gpuMaskY[],
             // Range check for columns
                 if ((start_c + j) >= 0 && (start_c + j) < cols) {
                     // Accumulate result
-                    tempY += matrix[(start_r + i) * rows + (start_c + j)] *
+                    tempY += matrix[(start_r + i) * cols + (start_c + j)] *
                             gpuMaskY[i][j];
                 }
             }
