@@ -136,7 +136,7 @@ int main(int argc, char * args[]) {
     //convertin from cv datatype to int[]
     for(int i = 0; i < image.rows; i++){
         for(int j = 0; j < image.cols; j++){
-            matrix[i+j] = static_cast<int>(image.at<uchar>(i,j));
+            matrix[i*image.rows+j] = static_cast<int>(image.at<uchar>(i,j));
         }
     }
     
@@ -201,6 +201,8 @@ int main(int argc, char * args[]) {
     delete[] resultX;
     delete[] resultY;
     delete[] resultFinal;
+    delete[] matrix;
+
 
     cudaFree(d_matrix);
     cudaFree(d_resultX);
