@@ -117,12 +117,9 @@ int main(int argc, char * args[]) {
 
     // Size of the matrix (in bytes)
     size_t bytes_n = N  * sizeof(int);
-    size_t bytes_res = N * sizeof(int);
 
     // Allocate the matrix and initialize it
     int *matrix = new int[N];
-    int *resultX = new int[N];
-    int *resultY = new int[N];
     int *resultFinal = new int[N];
     
     const int maskX[9] =    {-1,0,1,
@@ -149,7 +146,7 @@ int main(int argc, char * args[]) {
     int *d_resultFinal;
 
     cudaMalloc(&d_matrix, bytes_n);
-    cudaMalloc(&d_resultFinal, bytes_res);
+    cudaMalloc(&d_resultFinal, bytes_n);
     cudaMalloc(&d_maskX, sizeof(maskX));
     cudaMalloc(&d_maskY, sizeof(maskX));
     
@@ -175,7 +172,7 @@ int main(int argc, char * args[]) {
     printf("returning from gpu\n");
     // Copy the result back to the CPU
 
-    cudaMemcpy(resultFinal, d_resultFinal, bytes_res, cudaMemcpyDeviceToHost);
+    cudaMemcpy(resultFinal, d_resultFinal, bytes_n, cudaMemcpyDeviceToHost);
 
     printf("COMPLETED SUCCESSFULLY!\n");
 
@@ -196,14 +193,14 @@ int main(int argc, char * args[]) {
     // Free the memory we allocated
 
     //delete[] matrix;
-    delete[] resultX;
-    delete[] resultY;
     delete[] resultFinal;
     delete[] matrix;
 
 
     cudaFree(d_matrix);
     cudaFree(d_resultFinal);
+    cudaFree(d_maskX);
+    cudaFree(d_maskY);
 
     return 0;
 }
