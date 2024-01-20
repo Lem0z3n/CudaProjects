@@ -70,7 +70,7 @@ int main(int argc, char * args[]) {
     // Copy the result back to the host
     cudaMemcpy(h_outputImage, d_outputImage, width * height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 
-    cv :: Mat imageResult(image.rows, image.cols, CV_8UC1, h_outputImage);
+    cv :: Mat imageResult(image.rows, image.cols, CV_8U, h_outputImage);
 
     char resultName [1024];
     sprintf(resultName, "Completed%s", args[1]);
