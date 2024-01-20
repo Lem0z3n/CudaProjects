@@ -33,9 +33,11 @@ __global__ void sobelEdgeDetector(const unsigned char* inputImage, unsigned char
         // Calculate gradient magnitude
         float magnitude = sqrt(static_cast<float>(gx * gx + gy * gy));
 
-        int threshold = 100;
+        int threshold = 50;
 
         outputImage[y * width + x] = (magnitude > threshold) ? 255 : 0;
+
+        //magnitude = fminf(255.0f, fmaxf(0.0f, magnitude * 1.0f));
     } else {
         // Border pixels - just copy the input to output
         outputImage[y * width + x] = inputImage[y * width + x];
