@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <cmath>
 
 // 3 convolutional mask
 #define MASK_DIM 3
@@ -80,8 +81,9 @@ int mean=0;
         }
     }
 
+    double accResult = (tempX*tempX)+(tempY*tempY);
     //√(𝐻 𝑖𝑗)² + (𝑉 𝑖𝑗)²
-    int accResult =  sqrt( pow(tempX,2) + pow(tempY,2));
+    accResult = sqrt(accResult);
 
     int threshold = 50;
     //if the result is bigger than the threshold write white if not black.
