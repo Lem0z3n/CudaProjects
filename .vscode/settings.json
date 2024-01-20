@@ -3,6 +3,7 @@
         "new": "cpp",
         "iostream": "cpp",
         "functional": "cpp",
-        "__locale": "cpp"
+        "__locale": "cpp",
+        "ios": "cpp"
     }
 }

@@ -27,7 +27,7 @@
 //  result: Convolution result
 //  N:      Dimensions of the matrices
 __global__ void sobelOperator(int *matrix, int *gpuMaskX, int *gpuMaskY,
-                                 int *resultFinal, int cols, int rows) { 
+                                 int *resultFinal, int rows, int cols) { 
    
     // Calculate the global thread positions
     int tid = blockIdx.x*blockDim.x + threadIdx.x;
@@ -59,9 +59,9 @@ int mean=0;
             }
         }
     }
-
     mean =mean/9;
     matrix[tid] = mean;
+
     __syncthreads();
 
  for (int i = 0; i < MASK_DIM; i++) {
@@ -75,7 +75,7 @@ int mean=0;
                     tempX += matrix[(start_r + i) * cols + (start_c + j)] *
                             gpuMaskX[i*3+j];
                     tempY += matrix[(start_r + i) * cols + (start_c + j)] *
-                    gpuMaskY[i*3+j];
+                            gpuMaskY[i*3+j];
                 }
             }
         }
@@ -137,9 +137,9 @@ int main(int argc, char * args[]) {
                             -2,0,2,
                             -1,0,1};
 
-    const int maskY[9] =    {-1,-2,-1
+    const int maskY[9] =    {1,2,1
                             ,0,0,0,
-                            1,2,1};
+                            -1,-2,-1};
 
 
     //convertin from cv datatype to int[]
@@ -180,7 +180,7 @@ int main(int argc, char * args[]) {
     // Perform 2D Convolution
 
     printf("calling gpu\n");
-    sobelOperator<<<GRID, THREADS>>>(d_matrix, d_maskX, d_maskY, d_resultFinal, image.cols, image.rows);
+    sobelOperator<<<GRID, THREADS>>>(d_matrix, d_maskX, d_maskY, d_resultFinal, image.rows, image.cols);
     printf("returning from gpu\n");
     // Copy the result back to the CPU
 
