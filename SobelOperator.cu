@@ -137,7 +137,7 @@ int main(int argc, char * args[]) {
     //convertin from cv datatype to int[]
     for(int i = 0; i < image.rows; i++){
         for(int j = 0; j < image.cols; j++){
-            matrix[i*image.rows+j] = static_cast<int>(image.at<uchar>(i,j));
+            matrix[i*image.cols+j] = static_cast<int>(image.at<uchar>(i,j));
         }
     }
     
