@@ -35,9 +35,11 @@ __global__ void sobelEdgeDetector(const unsigned char* inputImage, unsigned char
 
         int threshold = 75;
 
-        outputImage[y * width + x] = (magnitude > threshold) ? 255 : 0;
+        //magnitude = (magnitude > threshold) ? 255 : 0;
 
-        //magnitude = fminf(255.0f, fmaxf(0.0f, magnitude * 1.0f));
+        magnitude = fminf(255.0f, fmaxf(0.0f, magnitude * 1.0f));
+
+        outputImage[y * width + x] = magnitude;
     } else {
         // Border pixels - just copy the input to output
         outputImage[y * width + x] = inputImage[y * width + x];
