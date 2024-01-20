@@ -51,23 +51,10 @@ __global__ void sobelOperator(int *matrix, int *gpuMaskX, int *gpuMaskY,
             // Range check for columns
                 if ((start_c + j) >= 0 && (start_c + j) < cols) {
                     // Accumulate result
-                    tempX += matrix[(start_r + i) * cols + (start_c + j)] *
+                    tempX += matrix[(start_r + i) * rows + (start_c + j)] *
                             gpuMaskX[i*3+j];
-                }
-            }
-        }
-    }
-
-    for (int i = 0; i < MASK_DIM; i++) {
-        // Go over each column
-        for (int j = 0; j < MASK_DIM; j++) {
-            // Range check for rows
-            if ((start_r + i) >= 0 && (start_r + i) < rows) {
-            // Range check for columns
-                if ((start_c + j) >= 0 && (start_c + j) < cols) {
-                    // Accumulate result
-                    tempY += matrix[(start_r + i) * cols + (start_c + j)] *
-                            gpuMaskY[i*3+j];
+                    tempY += matrix[(start_r + i) * rows + (start_c + j)] *
+                    gpuMaskY[i*3+j];
                 }
             }
         }
@@ -135,9 +122,10 @@ int main(int argc, char * args[]) {
 
 
     //convertin from cv datatype to int[]
+    int index=0;
     for(int i = 0; i < image.rows; i++){
         for(int j = 0; j < image.cols; j++){
-            matrix[i*image.cols+j] = static_cast<int>(image.at<uchar>(i,j));
+            matrix[index++] = static_cast<int>(image.at<uchar>(i,j));
         }
     }
     
