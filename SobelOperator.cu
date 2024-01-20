@@ -129,9 +129,9 @@ int main(int argc, char * args[]) {
                             -2,0,2,
                             -1,0,1};
 
-    const int maskY[9] =    {1,2,1
+    const int maskY[9] =    {-1,-2,-1
                             ,0,0,0,
-                            -1,-2,-1};
+                            1,2,1};
 
 
     //convertin from cv datatype to int[]
