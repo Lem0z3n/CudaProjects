@@ -2,19 +2,34 @@
 #include <cmath>
 #include <opencv2/opencv.hpp>
 
-__global__ void sobelEdgeDetector(const unsigned char* inputImage, unsigned char* outputImage, int width, int height) {
+#define MASK_DIM 3
+
+__global__ void sobelEdgeDetector(const unsigned char* inputImage, unsigned char* outputImage, int *gpuMaskX, int *gpuMaskY,
+                                     int width, int height) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
+    int gx=0;
+    int gy=0;
+
     if (x > 0 && x < width - 1 && y > 0 && y < height - 1) {
-        // Apply the Sobel filter
-        int gx = -1 * inputImage[(y - 1) * width + (x - 1)] + inputImage[(y - 1) * width + (x + 1)] +
-                 -2 * inputImage[y * width + (x - 1)] + 2 * inputImage[y * width + (x + 1)] +
-                 -1 * inputImage[(y + 1) * width + (x - 1)] + inputImage[(y + 1) * width + (x + 1)];
 
-        int gy = -1 * inputImage[(y - 1) * width + (x - 1)] - 2 * inputImage[(y - 1) * width + x] - inputImage[(y - 1) * width + (x + 1)] +
-                  inputImage[(y + 1) * width + (x - 1)] + 2 * inputImage[(y + 1) * width + x] + inputImage[(y + 1) * width + (x + 1)];
+        int start_c = x-1;
+        int start_r = y-1;
 
+        for (int i = 0; i < MASK_DIM; i++) {
+            // Go over each column
+            for (int j = 0; j < MASK_DIM; j++) {
+                // Range check for rows
+                // Accumulate result
+                gx += inputImage[(start_r + i) * width + (start_c + j)] *
+                        gpuMaskX[i*3+j];
+                gy += inputImage[(start_r + i) * width + (start_c + j)] *
+                        gpuMaskY[i*3+j];
+                
+            }
+        }
+    
         // Calculate gradient magnitude
         float magnitude = sqrt(static_cast<float>(gx * gx + gy * gy));
 
@@ -46,9 +61,19 @@ int main(int argc, char * args[]) {
     int height = image.rows;
     int width = image.cols;
 
+    const int maskX[9] =    {-1,0,1,
+                            -2,0,2,
+                            -1,0,1};
+
+    const int maskY[9] =    {1,2,1
+                            ,0,0,0,
+                            -1,-2,-1};
+
     // Allocate memory for the input and output images
     unsigned char* h_inputImage = new unsigned char[width * height];
     unsigned char* h_outputImage = new unsigned char[width * height];
+    int *d_maskX;
+    int *d_maskY;
 
     // Initialize input image (populate it with some values)
 
@@ -56,16 +81,20 @@ int main(int argc, char * args[]) {
     unsigned char *d_inputImage, *d_outputImage;
     cudaMalloc((void**)&d_inputImage, width * height * sizeof(unsigned char));
     cudaMalloc((void**)&d_outputImage, width * height * sizeof(unsigned char));
+    cudaMalloc(&d_maskX, sizeof(maskX));
+    cudaMalloc(&d_maskY, sizeof(maskX));
 
     // Copy input image from host to device
     cudaMemcpy(d_inputImage, h_inputImage, width * height * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_maskX, maskX, sizeof(maskX), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_maskY, maskY, sizeof(maskX), cudaMemcpyHostToDevice);
 
     // Define block and grid dimensions
     dim3 blockSize(16, 16);
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
     // Launch the Sobel edge detector kernel
-    sobelEdgeDetector<<<gridSize, blockSize>>>(d_inputImage, d_outputImage, width, height);
+    sobelEdgeDetector<<<gridSize, blockSize>>>(d_inputImage, d_outputImage, d_maskX, d_maskY, width, height);
 
     // Copy the result back to the host
     cudaMemcpy(h_outputImage, d_outputImage, width * height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
@@ -83,8 +112,12 @@ int main(int argc, char * args[]) {
     // Cleanup
     delete[] h_inputImage;
     delete[] h_outputImage;
+
     cudaFree(d_inputImage);
     cudaFree(d_outputImage);
+    cudaFree(d_maskX);
+    cudaFree(d_maskY);
+
 
     return 0;
 }

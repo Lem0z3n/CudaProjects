@@ -64,7 +64,7 @@ int mean=0;
 
     __syncthreads();
 
- for (int i = 0; i < MASK_DIM; i++) {
+    for (int i = 0; i < MASK_DIM; i++) {
         // Go over each column
         for (int j = 0; j < MASK_DIM; j++) {
             // Range check for rows
