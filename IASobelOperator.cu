@@ -22,7 +22,7 @@ __global__ void sobelEdgeDetector(const unsigned char* inputImage, unsigned char
         magnitude = fminf(255.0f, fmaxf(0.0f, magnitude));
 
         // Set the output pixel value
-        outputImage[y * width + x] = static_cast<unsigned char>(magnitude);
+        outputImage[y * width + x] = static_cast<unsigned char>(magnitude* 0.2f);
     } else {
         // Border pixels - just copy the input to output
         outputImage[y * width + x] = inputImage[y * width + x];
