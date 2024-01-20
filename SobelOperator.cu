@@ -64,10 +64,8 @@ __global__ void sobelOperator(int *matrix, int *gpuMaskX, int *gpuMaskY,
 
     int threshold = 100;
     //if the result is bigger than the threshold write white if not black.
-    resultFinal[tRow*cols+tCol] = (accResult>threshold) ? 255 : 0;
-;
-
-    //
+    resultFinal[tid] = (accResult>=threshold) ? 255 : 0;
+    
     }
 
     bool check_result(int * endRes, char* filename, int columns, int N){
