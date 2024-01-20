@@ -26,8 +26,8 @@
 //  matrix: Input matrix
 //  result: Convolution result
 //  N:      Dimensions of the matrices
-__global__ void sobelOperator(int *matrix, int *gpuMaskX, int *gpuMaskY,
-                                 int *resultFinal, int rows, int cols) { 
+__global__ void sobelOperator(unsigned char *matrix, int *gpuMaskX, int *gpuMaskY,
+                                 unsigned char *resultFinal, int rows, int cols) { 
    
     // Calculate the global thread positions
     int tid = blockIdx.x*blockDim.x + threadIdx.x;
@@ -130,8 +130,8 @@ int main(int argc, char * args[]) {
     size_t bytes_n = N  * sizeof(int);
 
     // Allocate the matrix and initialize it
-    int *matrix = new int[N];
-    int *resultFinal = new int[N];
+    unsigned char *matrix = new  unsigned char[N];
+    unsigned char *resultFinal = new  unsigned char[N];
     
     const int maskX[9] =    {-1,0,1,
                             -2,0,2,
@@ -146,7 +146,7 @@ int main(int argc, char * args[]) {
     int index=0;
     for(int i = 0; i < image.rows; i++){
         for(int j = 0; j < image.cols; j++){
-            matrix[index++] = static_cast<int>(image.at<uchar>(i,j));
+            matrix[index++] =(image.at<uchar>(i,j));
         }
     }
     

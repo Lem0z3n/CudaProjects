@@ -76,7 +76,12 @@ int main(int argc, char * args[]) {
     int *d_maskY;
 
     // Initialize input image (populate it with some values)
-
+    int index=0;
+    for(int i = 0; i < image.rows; i++){
+        for(int j = 0; j < image.cols; j++){
+            h_inputImage[index++] =(image.at<uchar>(i,j));
+        }
+    }
     // Allocate device memory
     unsigned char *d_inputImage, *d_outputImage;
     cudaMalloc((void**)&d_inputImage, width * height * sizeof(unsigned char));
