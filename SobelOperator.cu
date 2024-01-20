@@ -51,9 +51,9 @@ __global__ void sobelOperator(int *matrix, int *gpuMaskX, int *gpuMaskY,
             // Range check for columns
                 if ((start_c + j) >= 0 && (start_c + j) < cols) {
                     // Accumulate result
-                    tempX += matrix[(start_r + i) * rows + (start_c + j)] *
+                    tempX += matrix[(start_r + i) * cols + (start_c + j)] *
                             gpuMaskX[i*3+j];
-                    tempY += matrix[(start_r + i) * rows + (start_c + j)] *
+                    tempY += matrix[(start_r + i) * cols + (start_c + j)] *
                     gpuMaskY[i*3+j];
                 }
             }
@@ -169,7 +169,7 @@ int main(int argc, char * args[]) {
 
     check_result(resultFinal,"result",image.cols, N);
 
-    cv :: Mat imageResult(image.cols, image.rows, CV_8UC1, resultFinal);
+    cv :: Mat imageResult(image.rows, image.cols, CV_8UC1, resultFinal);
 
     char resultName [1024];
     sprintf(resultName, "Completed%s", args[1]);
