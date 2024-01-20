@@ -42,8 +42,28 @@ __global__ void sobelOperator(int *matrix, int *gpuMaskX, int *gpuMaskY,
     int start_r = tRow - MASK_OFFSET;
     int start_c = tCol - MASK_OFFSET;
 
+
+//FIRSTLY LETS APPLY A BLURR TO THE IMAGE
+int mean=0;
     // Iterate over all the rows
     for (int i = 0; i < MASK_DIM; i++) {
+        // Go over each column
+        for (int j = 0; j < MASK_DIM; j++) {
+            // Range check for rows
+            if ((start_r + i) >= 0 && (start_r + i) < rows) {
+            // Range check for columns
+                if ((start_c + j) >= 0 && (start_c + j) < cols) {
+                    mean += matrix[(start_r + i) * cols + (start_c + j)];
+                }
+            }
+        }
+    }
+
+    mean =mean/9;
+    matrix[tid] = mean;
+    __syncthreads();
+
+ for (int i = 0; i < MASK_DIM; i++) {
         // Go over each column
         for (int j = 0; j < MASK_DIM; j++) {
             // Range check for rows
@@ -59,6 +79,7 @@ __global__ void sobelOperator(int *matrix, int *gpuMaskX, int *gpuMaskY,
             }
         }
     }
+
     //√(𝐻 𝑖𝑗)² + (𝑉 𝑖𝑗)²
     int accResult =  sqrt( pow(tempX,2) + pow(tempY,2));
 
