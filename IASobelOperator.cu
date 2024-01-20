@@ -19,10 +19,10 @@ __global__ void sobelEdgeDetector(const unsigned char* inputImage, unsigned char
         float magnitude = sqrt(static_cast<float>(gx * gx + gy * gy));
 
         // Clamp magnitude to the range [0, 255]
-        magnitude = fminf(255.0f, fmaxf(0.0f, magnitude));
+        magnitude = fminf(255.0f, fmaxf(0.0f, magnitude* 1.0f));
 
         // Set the output pixel value
-        outputImage[y * width + x] = static_cast<unsigned char>(magnitude* 0.2f);
+        outputImage[y * width + x] = static_cast<unsigned char>(magnitude);
     } else {
         // Border pixels - just copy the input to output
         outputImage[y * width + x] = inputImage[y * width + x];
