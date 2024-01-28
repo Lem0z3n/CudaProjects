@@ -60,9 +60,13 @@ __global__ void sobelEdgeDetector(const unsigned char* inputImage,
         //normalizing
         magnitude = fminf(255.0f, fmaxf(0.0f, magnitude * 1.0f));
         
-        float redV = fminf(255.0f, fmaxf(0.0f, gx * 1.0f));
-        float blueV = fminf(255.0f, fmaxf(0.0f, gy * 1.0f));
+        float redV = 0;
+        float blueV = 0;
 
+        if(alpha != 0){
+            redV = fminf(255.0f, fmaxf(0.0f, gx * 1.0f));
+            blueV = fminf(255.0f, fmaxf(0.0f, gy * 1.0f));
+        }
 
         alpha[y * width + x] = magnitude;
         red[y * width + x] = redV;
