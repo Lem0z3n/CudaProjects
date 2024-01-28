@@ -1,114 +1,79 @@
-// This program implements 2D convolution using Constant memory in CUDA
-// By: Nick from CoffeeBeforeArch
-
-#include <cassert>
-#include <cstdlib>
 #include <iostream>
-#include <opencv2/opencv.hpp>
-#include <string>
-#include <algorithm>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <cmath>
+#include <opencv2/opencv.hpp>
 
-// 3 convolutional mask
 #define MASK_DIM 3
 
-// Amount the the matrix will hang over the matrix
-#define MASK_OFFSET (MASK_DIM / 2)
+__global__ void sobelEdgeDetector(const unsigned char* inputImage, 
+                                  unsigned char* alpha, unsigned char* red, unsigned char* blue,
+                                  int *gpuMaskX, int *gpuMaskY,
+                                  int width, int height) {
 
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
 
+    int gx=0;
+    int gy=0;
 
-// 2D Convolution Kernel
-// Takes:
-//  matrix: Input matrix
-//  result: Convolution result
-//  N:      Dimensions of the matrices
-__global__ void sobelOperator(unsigned char *matrix, int *gpuMaskX, int *gpuMaskY,
-                                 unsigned char *resultFinal, int rows, int cols) { 
-   
-    // Calculate the global thread positions
-    int tid = blockIdx.x*blockDim.x + threadIdx.x;
+    if (x > 0 && x < width - 1 && y > 0 && y < height - 1) {
 
-    int tCol = tid % cols;
-    int tRow = tid / cols;
+        int start_c = x-1;
+        int start_r = y-1;
 
-    // Temp value for accumulating the result
-    int tempX = 0;
-    int tempY = 0;
-
-    // Starting index for calculation
-    int start_r = tRow - MASK_OFFSET;
-    int start_c = tCol - MASK_OFFSET;
-
-
-//FIRSTLY LETS APPLY A BLURR TO THE IMAGE
-int mean=0;
-    // Iterate over all the rows
-    for (int i = 0; i < MASK_DIM; i++) {
-        // Go over each column
-        for (int j = 0; j < MASK_DIM; j++) {
-            // Range check for rows
-            if ((start_r + i) >= 0 && (start_r + i) < rows) {
-            // Range check for columns
-                if ((start_c + j) >= 0 && (start_c + j) < cols) {
-                    mean += matrix[(start_r + i) * cols + (start_c + j)];
-                }
+        int sum = 0;
+        //Apply a box blur
+        for (int i = 0; i < MASK_DIM; i++) {
+            // Go over each column
+            for (int j = 0; j < MASK_DIM; j++) {
+                // Range check for rows
+                // Accumulate result
+                sum += inputImage[(start_r + i) * width + (start_c + j)];
+                             
             }
         }
-    }
-    mean =mean/9;
-    matrix[tid] = mean;
 
-    __syncthreads();
+        sum = sum/9; //we do the mean
+        alpha[y*width+x] = sum; //we stablish the new value
+        //we might as well use alpha to store temporary information. for memory efficiency 
+        __syncthreads();    //we wait for all threads
 
-    for (int i = 0; i < MASK_DIM; i++) {
-        // Go over each column
-        for (int j = 0; j < MASK_DIM; j++) {
-            // Range check for rows
-            if ((start_r + i) >= 0 && (start_r + i) < rows) {
-            // Range check for columns
-                if ((start_c + j) >= 0 && (start_c + j) < cols) {
-                    // Accumulate result
-                    tempX += matrix[(start_r + i) * cols + (start_c + j)] *
-                            gpuMaskX[i*3+j];
-                    tempY += matrix[(start_r + i) * cols + (start_c + j)] *
-                            gpuMaskY[i*3+j];
-                }
+        for (int i = 0; i < MASK_DIM; i++) {
+            // Go over each column
+            for (int j = 0; j < MASK_DIM; j++) {
+                // Range check for rows
+                // Accumulate result
+                gx += alpha[(start_r + i) * width + (start_c + j)] *
+                        gpuMaskX[i*3+j];
+                gy += alpha[(start_r + i) * width + (start_c + j)] *
+                        gpuMaskY[i*3+j];
+                
             }
         }
-    }
-
-    double accResult = (tempX*tempX)+(tempY*tempY);
-    //√(𝐻 𝑖𝑗)² + (𝑉 𝑖𝑗)²
-    accResult = sqrt(accResult);
-
-    int threshold = 50;
-    //if the result is bigger than the threshold write white if not black.
-    resultFinal[tid] = (accResult>=threshold) ? 255 : 0;
     
+        // Calculate gradient magnitude
+        float magnitude = sqrt(static_cast<float>(gx * gx + gy * gy));
+
+        int threshold = 75;
+
+        //magnitude = (magnitude > threshold) ? 255 : 0;
+
+        //normalizing
+        magnitude = fminf(255.0f, fmaxf(0.0f, magnitude * 1.0f));
+        
+        float redV = fminf(255.0f, fmaxf(0.0f, gx * 1.0f));
+        float blueV = fminf(255.0f, fmaxf(0.0f, gy * 1.0f));
+
+
+        alpha[y * width + x] = magnitude;
+        red[y * width + x] = redV;
+        blue[y * width + x] = blueV;
+
+    } else {
+        // Border pixels - just copy the input to output
+        alpha[y * width + x] = inputImage[y * width + x];
     }
-
-    bool check_result(int * endRes, char* filename, int columns, int N){
-
-    char name[512];
-    sprintf(name,"%s.txt",filename);
-    FILE * file = fopen(name,"w");
-
-    int i = 0;
-    printf("writing image\n");
-    while(fprintf(file," %i ",endRes[i])>0 && i < N){
-        i++;
-        if(i%columns == 0)
-            fprintf(file,"\n");
-    }
-    fclose(file);
-
-    return true;
 }
-    
+
 int main(int argc, char * args[]) {
 
     if(argc < 2){
@@ -122,17 +87,10 @@ int main(int argc, char * args[]) {
         std::cout << "Error: Unable to read the image." << std::endl;
         return -1;
     }
-    printf("image read.\n");   
-    // Dimensions of the image
-    int N = image.cols * image.rows;
 
-    // Size of the matrix (in bytes)
-    size_t bytes_n = N  * sizeof(int);
+    int height = image.rows;
+    int width = image.cols;
 
-    // Allocate the matrix and initialize it
-    unsigned char *matrix = new  unsigned char[N];
-    unsigned char *resultFinal = new  unsigned char[N];
-    
     const int maskX[9] =    {-1,0,1,
                             -2,0,2,
                             -1,0,1};
@@ -141,56 +99,58 @@ int main(int argc, char * args[]) {
                             ,0,0,0,
                             -1,-2,-1};
 
+    // Allocate memory for the input and output images
+    unsigned char* h_inputImage = new unsigned char[width * height];
+    unsigned char* h_alpha = new unsigned char[width * height];
+    unsigned char* h_red = new unsigned char[width * height];
+    unsigned char* h_blue = new unsigned char[width * height];
+    int *d_maskX;
+    int *d_maskY;
 
-    //convertin from cv datatype to int[]
+    // Initialize input image (populate it with some values)
     int index=0;
     for(int i = 0; i < image.rows; i++){
         for(int j = 0; j < image.cols; j++){
-            matrix[index++] =(image.at<uchar>(i,j));
+            h_inputImage[index++] =(image.at<uchar>(i,j));
         }
     }
-    
-
     // Allocate device memory
-    int *d_matrix;
-    int *d_maskX;
-    int *d_maskY;
-    int *d_resultFinal;
+    unsigned char *d_inputImage, *d_alpha, *d_red, *d_blue;
 
-    cudaMalloc(&d_matrix, bytes_n);
-    cudaMalloc(&d_resultFinal, bytes_n);
+    cudaMalloc((void**)&d_inputImage, width * height * sizeof(unsigned char));
+    cudaMalloc((void**)&d_alpha, width * height * sizeof(unsigned char));
+    cudaMalloc((void**)&d_red, width * height * sizeof(unsigned char));
+    cudaMalloc((void**)&d_blue, width * height * sizeof(unsigned char));
     cudaMalloc(&d_maskX, sizeof(maskX));
     cudaMalloc(&d_maskY, sizeof(maskX));
-    
-    printf("checking image\n");
-    check_result(matrix,"matrix",image.cols, N);
-    // Copy data to the device
-    cudaMemcpy(d_matrix, matrix, bytes_n, cudaMemcpyHostToDevice);
+
+    // Copy input image from host to device
+    cudaMemcpy(d_inputImage, h_inputImage, width * height * sizeof(unsigned char), cudaMemcpyHostToDevice);
     cudaMemcpy(d_maskX, maskX, sizeof(maskX), cudaMemcpyHostToDevice);
     cudaMemcpy(d_maskY, maskY, sizeof(maskX), cudaMemcpyHostToDevice);
 
-    printf("Image copied to GPU\n");
-    
-    // Threads per TB
-    int THREADS = 256;
+    // Define block and grid dimensions
+    dim3 blockSize(16, 16);
+    dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
-    // Number of TBs
-    int GRID = (N + THREADS - 1) / THREADS;
+    // Launch the Sobel edge detector kernel
+    sobelEdgeDetector<<<gridSize, blockSize>>>(d_inputImage, d_alpha, d_blue, d_red, d_maskX, d_maskY, width, height);
 
-    // Perform 2D Convolution
+    // Copy the result back to the host
+    cudaMemcpy(h_alpha, d_alpha, width * height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_red, d_red, width * height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_blue, d_blue, width * height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 
-    printf("calling gpu\n");
-    sobelOperator<<<GRID, THREADS>>>(d_matrix, d_maskX, d_maskY, d_resultFinal, image.rows, image.cols);
-    printf("returning from gpu\n");
-    // Copy the result back to the CPU
+    // Create cv::Mat objects for each channel
+    cv::Mat blueMat(height, width, CV_8UC1, h_blue);
+    cv::Mat greenMat(height, width, CV_8UC1, cv::Scalar(0)); // Set green channel to all zeros
+    cv::Mat redMat(height, width, CV_8UC1, h_red);
+    cv::Mat alphaMat(height, width, CV_8UC1, h_alpha);
 
-    cudaMemcpy(resultFinal, d_resultFinal, bytes_n, cudaMemcpyDeviceToHost);
-
-    printf("COMPLETED SUCCESSFULLY!\n");
-
-    check_result(resultFinal,"result",image.cols, N);
-
-    cv :: Mat imageResult(image.rows, image.cols, CV_8UC1, resultFinal);
+    // Merge the channels into a single ARGB image
+    std::vector<cv::Mat> channels = {blueMat, greenMat, redMat, alphaMat};
+    cv::Mat imageResult;
+    cv::merge(channels, imageResult);
 
     char resultName [1024];
     sprintf(resultName, "Completed%s", args[1]);
@@ -199,20 +159,20 @@ int main(int argc, char * args[]) {
         std::cout << "Image saved successfully!" << std::endl;
     else
         std::cerr << "Error saving image" << std::endl;
-    
 
+    // Cleanup
+    delete[] h_inputImage;
+    delete[] h_alpha;
+    delete[] h_blue;
+    delete[] h_red;
 
-    // Free the memory we allocated
-
-    //delete[] matrix;
-    delete[] resultFinal;
-    delete[] matrix;
-
-
-    cudaFree(d_matrix);
-    cudaFree(d_resultFinal);
+    cudaFree(d_inputImage);
+    cudaFree(d_alpha);
+    cudaFree(d_red);
+    cudaFree(d_blue);
     cudaFree(d_maskX);
     cudaFree(d_maskY);
+
 
     return 0;
 }
