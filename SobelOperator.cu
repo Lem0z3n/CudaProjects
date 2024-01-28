@@ -20,7 +20,7 @@ __global__ void sobelEdgeDetector(const unsigned char* inputImage,
         int start_c = x-1;
         int start_r = y-1;
 
-    /*    int sum = 0;
+        int sum = 0;
         //Apply a box blur
         for (int i = 0; i < MASK_DIM; i++) {
             // Go over each column
@@ -36,7 +36,7 @@ __global__ void sobelEdgeDetector(const unsigned char* inputImage,
         alpha[y*width+x] = sum; //we stablish the new value
         //we might as well use alpha to store temporary information. for memory efficiency 
         __syncthreads();    //we wait for all threads
-    */
+    
         for (int i = 0; i < MASK_DIM; i++) {
             // Go over each column
             for (int j = 0; j < MASK_DIM; j++) {
