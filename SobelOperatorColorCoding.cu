@@ -4,8 +4,11 @@
 
 #define MASK_DIM 3
 
-__global__ void sobelEdgeDetector(const unsigned char* inputImage, unsigned char* outputImage, int *gpuMaskX, int *gpuMaskY,
-                                     int width, int height) {
+__global__ void sobelEdgeDetector(const unsigned char* inputImage, 
+                                  unsigned char* alpha, unsigned char* red, unsigned char* blue,
+                                  int *gpuMaskX, int *gpuMaskY,
+                                  int width, int height) {
+
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -16,30 +19,15 @@ __global__ void sobelEdgeDetector(const unsigned char* inputImage, unsigned char
 
         int start_c = x-1;
         int start_r = y-1;
-
-        int sum = 0;
-        //Apply a box blur
+        
         for (int i = 0; i < MASK_DIM; i++) {
             // Go over each column
             for (int j = 0; j < MASK_DIM; j++) {
                 // Range check for rows
                 // Accumulate result
-                sum += inputImage[(start_r + i) * width + (start_c + j)];                                        
-            }
-        }
-        sum = sum/9; //we do the mean
-        outputImage[y*width+x] = sum; //we stablish the new value
-        //we might as well use alpha to store temporary information. for memory efficiency 
-        __syncthreads();    //we wait for all threadss
-    
-        for (int i = 0; i < MASK_DIM; i++) {
-            // Go over each column
-            for (int j = 0; j < MASK_DIM; j++) {
-                // Range check for rows
-                // Accumulate result
-                gx += outputImage[(start_r + i) * width + (start_c + j)] *
+                gx += inputImage[(start_r + i) * width + (start_c + j)] *
                         gpuMaskX[i*3+j];
-                gy += outputImage[(start_r + i) * width + (start_c + j)] *
+                gy += inputImage[(start_r + i) * width + (start_c + j)] *
                         gpuMaskY[i*3+j];
                 
             }
@@ -48,16 +36,28 @@ __global__ void sobelEdgeDetector(const unsigned char* inputImage, unsigned char
         // Calculate gradient magnitude
         float magnitude = sqrt(static_cast<float>(gx * gx + gy * gy));
 
-        int threshold = 75;
+        int threshold = 80;
 
         //magnitude = (magnitude > threshold) ? 255 : 0;
 
+        //normalizing
         magnitude = fminf(255.0f, fmaxf(0.0f, magnitude * 1.0f));
+        
+        float redV = 0;
+        float blueV = 0;
 
-        outputImage[y * width + x] = magnitude;
+        if(magnitude > threshold){
+            redV = fminf(255.0f, fmaxf(0.0f, gx * 1.0f));
+            blueV = fminf(255.0f, fmaxf(0.0f, gy * 1.0f));
+        }
+
+        alpha[y * width + x] = magnitude;
+        red[y * width + x] = redV;
+        blue[y * width + x] = blueV;
+
     } else {
         // Border pixels - just copy the input to output
-        outputImage[y * width + x] = inputImage[y * width + x];
+        alpha[y * width + x] = inputImage[y * width + x];
     }
 }
 
@@ -88,7 +88,9 @@ int main(int argc, char * args[]) {
 
     // Allocate memory for the input and output images
     unsigned char* h_inputImage = new unsigned char[width * height];
-    unsigned char* h_outputImage = new unsigned char[width * height];
+    unsigned char* h_alpha = new unsigned char[width * height];
+    unsigned char* h_red = new unsigned char[width * height];
+    unsigned char* h_blue = new unsigned char[width * height];
     int *d_maskX;
     int *d_maskY;
 
@@ -100,9 +102,12 @@ int main(int argc, char * args[]) {
         }
     }
     // Allocate device memory
-    unsigned char *d_inputImage, *d_outputImage;
+    unsigned char *d_inputImage, *d_alpha, *d_red, *d_blue;
+
     cudaMalloc((void**)&d_inputImage, width * height * sizeof(unsigned char));
-    cudaMalloc((void**)&d_outputImage, width * height * sizeof(unsigned char));
+    cudaMalloc((void**)&d_alpha, width * height * sizeof(unsigned char));
+    cudaMalloc((void**)&d_red, width * height * sizeof(unsigned char));
+    cudaMalloc((void**)&d_blue, width * height * sizeof(unsigned char));
     cudaMalloc(&d_maskX, sizeof(maskX));
     cudaMalloc(&d_maskY, sizeof(maskX));
 
@@ -116,12 +121,23 @@ int main(int argc, char * args[]) {
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
     // Launch the Sobel edge detector kernel
-    sobelEdgeDetector<<<gridSize, blockSize>>>(d_inputImage, d_outputImage, d_maskX, d_maskY, width, height);
+    sobelEdgeDetector<<<gridSize, blockSize>>>(d_inputImage, d_alpha, d_blue, d_red, d_maskX, d_maskY, width, height);
 
     // Copy the result back to the host
-    cudaMemcpy(h_outputImage, d_outputImage, width * height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_alpha, d_alpha, width * height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_red, d_red, width * height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_blue, d_blue, width * height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 
-    cv :: Mat imageResult(image.rows, image.cols, CV_8U, h_outputImage);
+    // Create cv::Mat objects for each channel
+    cv::Mat blueMat(height, width, CV_8UC1, h_blue);
+    cv::Mat greenMat(height, width, CV_8UC1, cv::Scalar(0)); // Set green channel to all zeros
+    cv::Mat redMat(height, width, CV_8UC1, h_red);
+    cv::Mat alphaMat(height, width, CV_8UC1, h_alpha);
+
+    // Merge the channels into a single ARGB image
+    std::vector<cv::Mat> channels = {blueMat, greenMat, redMat, alphaMat};
+    cv::Mat imageResult;
+    cv::merge(channels, imageResult);
 
     char resultName [1024];
     sprintf(resultName, "Completed%s", args[1]);
@@ -133,10 +149,14 @@ int main(int argc, char * args[]) {
 
     // Cleanup
     delete[] h_inputImage;
-    delete[] h_outputImage;
+    delete[] h_alpha;
+    delete[] h_blue;
+    delete[] h_red;
 
     cudaFree(d_inputImage);
-    cudaFree(d_outputImage);
+    cudaFree(d_alpha);
+    cudaFree(d_red);
+    cudaFree(d_blue);
     cudaFree(d_maskX);
     cudaFree(d_maskY);
 

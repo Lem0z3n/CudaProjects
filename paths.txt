@@ -1,7 +1,0 @@
-g++ -o SobelEdgeDetector.o  -c main.cpp -I/usr/include/opencv4 -L/usr/local/include/opencv -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_imgcodecs -static
-
-
-
--I/usr/include/opencv4 -L/usr/local/include/opencv
-
--lopencv_imgproc -lopencv_core -lopencv_imgcodecs -lopencv_highgui
