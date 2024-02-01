@@ -33,11 +33,12 @@ __global__ void sobelEdgeDetector(const unsigned char* inputImage, unsigned char
         // Calculate gradient magnitude
         float magnitude = sqrt(static_cast<float>(gx * gx + gy * gy));
 
-        int threshold = 75;
+        int threshold = 25;
 
         //magnitude = (magnitude > threshold) ? 255 : 0;
 
         magnitude = fminf(255.0f, fmaxf(0.0f, magnitude * 1.0f));
+        magnitude = (magnitude > threshold) ? magnitude : 0;
 
         outputImage[y * width + x] = magnitude;
     } else {
@@ -57,10 +58,11 @@ void CpuSobelOperator(const unsigned char* inputImage, unsigned char* outputImag
             if (x > 0 && x < width - 1 && y > 0 && y < height - 1) {
                 int gx=0;
                 int gy=0;
-
+                
                 int start_c = x-1;
                 int start_r = y-1;
 
+                int threshold = 25;
                 for (int i = 0; i < MASK_DIM; i++) {
                         // Go over each column
                         for (int j = 0; j < MASK_DIM; j++) {
@@ -75,6 +77,7 @@ void CpuSobelOperator(const unsigned char* inputImage, unsigned char* outputImag
                 }
                 float magnitude = sqrt(static_cast<float>(gx * gx + gy * gy));
                 magnitude = fminf(255.0f, fmaxf(0.0f, magnitude * 1.0f));
+                magnitude = (magnitude > threshold) ? magnitude : 0;
                 outputImage[y * width + x] = magnitude;
             } else {
                 // Border pixels - just copy the input to output
