@@ -16,30 +16,15 @@ __global__ void sobelEdgeDetector(const unsigned char* inputImage, unsigned char
 
         int start_c = x-1;
         int start_r = y-1;
-
-        int sum = 0;
-        //Apply a box blur
-        for (int i = 0; i < MASK_DIM; i++) {
-            // Go over each column
-            for (int j = 0; j < MASK_DIM; j++) {
-                // Range check for rows
-                // Accumulate result
-                sum += inputImage[(start_r + i) * width + (start_c + j)];                                        
-            }
-        }
-        sum = sum/9; //we do the mean
-        outputImage[y*width+x] = sum; //we stablish the new value
-        //we might as well use alpha to store temporary information. for memory efficiency 
-        __syncthreads();    //we wait for all threadss
     
         for (int i = 0; i < MASK_DIM; i++) {
             // Go over each column
             for (int j = 0; j < MASK_DIM; j++) {
                 // Range check for rows
                 // Accumulate result
-                gx += outputImage[(start_r + i) * width + (start_c + j)] *
+                gx += inputImage[(start_r + i) * width + (start_c + j)] *
                         gpuMaskX[i*3+j];
-                gy += outputImage[(start_r + i) * width + (start_c + j)] *
+                gy += inputImage[(start_r + i) * width + (start_c + j)] *
                         gpuMaskY[i*3+j];
                 
             }
